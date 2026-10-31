@@ -3,26 +3,82 @@
 [MJML](https://mjml.io) email templates written in Hamlet's syntax and checked
 at compile time. Rendering goes through the [`mjml`](https://github.com/kronor-io/mjml/tree/main/mjml) package, so
 there is no Node.js involved at build time or at runtime. For what MJML is and
-a full example with screenshots, see the [repository README](https://github.com/kronor-io/mjml#readme).
+what it is for, see the [repository README](https://github.com/kronor-io/mjml#readme).
+
+An order confirmation: data goes in with `#{...}`, `$forall` repeats a row
+per item, `$maybe` adds the tracking button only when there is a link, and
+`^{footer}` embeds a piece shared by every email.
 
 ```haskell
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-import Text.Mjml.Hamlet (mjml, renderMjml)
+import Data.Text (Text)
+import Text.Mjml (MjmlError, Node)
+import Text.Mjml.Hamlet (SafeUrl, mjml, renderMjml)
 
-shipped :: Order -> Either MjmlError Text
-shipped order =
+data Order = Order
+    { reference :: Text
+    , customer :: Text
+    , items :: [Item]
+    , total :: Text
+    , trackingUrl :: Maybe SafeUrl
+    }
+
+data Item = Item {name :: Text, quantity :: Int, price :: Text}
+
+confirmation :: Order -> Either MjmlError Text
+confirmation order =
     renderMjml
         [mjml|
-        <mj-section>
-          <mj-column>
-            <mj-text font-size="20px">Your order #{order.reference} is on its way
-            $forall line <- order.lines
-              <mj-text>#{line.name} × #{line.quantity}
-            $maybe url <- order.trackingUrl
-              <mj-button href=#{url} .primary>Track it
+        <mjml>
+          <mj-head>
+            <mj-title>Order #{order.reference}
+            <mj-preview>Thanks for your order, #{order.customer}
+            <mj-attributes>
+              <mj-all font-family="Helvetica, Arial, sans-serif">
+              <mj-text font-size="15px" line-height="22px" color="#333333">
+          <mj-body background-color="#f4f4f4">
+            <mj-section padding="12px">
+            <mj-section background-color="#ffffff" padding="24px">
+              <mj-column>
+                <mj-text font-size="22px" font-weight="bold">Thanks, #{order.customer}!
+                <mj-text>We have received order #{order.reference} and will tell you when it ships.
+            $forall item <- order.items
+              <mj-section background-color="#ffffff" padding="0 24px">
+                <mj-group>
+                  <mj-column width="70%">
+                    <mj-text>#{item.quantity} × #{item.name}
+                  <mj-column width="30%">
+                    <mj-text align="right">#{item.price}
+            <mj-section background-color="#ffffff" padding="0 24px 24px">
+              <mj-column>
+                <mj-divider border-color="#dddddd" border-width="1px">
+                <mj-text align="right" font-weight="bold">Total #{order.total}
+                $maybe url <- order.trackingUrl
+                  <mj-button href=#{url} background-color="#1a73e8">Track your parcel
+            ^{footer}
         |]
+
+-- A piece shared by every email, embedded above with ^{footer}.
+footer :: [Node]
+footer =
+    [mjml|
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="12px" color="#888888" align="center">
+          You are receiving this email because you placed an order with us.
+    |]
 ```
+
+The result, on a desktop client and on a phone:
+
+![The order confirmation in a desktop mail client](https://raw.githubusercontent.com/kronor-io/mjml/eab39e4062d3a98055c8295a80d50395f502d6f8/docs/confirmation-desktop.png)
+
+![The same email on a phone: narrower, with item names and prices still side by side](https://raw.githubusercontent.com/kronor-io/mjml/eab39e4062d3a98055c8295a80d50395f502d6f8/docs/confirmation-mobile.png)
+
+`mj-group` keeps each item and its price side by side on the phone; plain
+columns would stack.
 
 ## Syntax
 

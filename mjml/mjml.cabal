@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               mjml
-version:            0.1.0.0
+version:            0.1.0.1
 synopsis:           Render MJML responsive email templates to HTML
 description:
   A Haskell implementation of the MJML email framework. It renders MJML

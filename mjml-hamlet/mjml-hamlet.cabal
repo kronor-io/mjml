@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               mjml-hamlet
-version:            0.1.0.0
+version:            0.1.0.1
 synopsis:           MJML email templates in Hamlet syntax, checked at compile time
 description:
   A quasiquoter for MJML documents written with Hamlet's indentation-based

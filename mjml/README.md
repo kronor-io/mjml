@@ -9,8 +9,14 @@ Outlook conditional comments that render the same in every mail client, with
 columns that stack on phones. This package is a port of the reference
 JavaScript implementation and produces the same HTML as MJML 5. To write
 templates in Haskell with compile-time checks, see
-[`mjml-hamlet`](https://github.com/kronor-io/mjml/tree/main/mjml-hamlet); for a full example with screenshots, see the
-[repository README](https://github.com/kronor-io/mjml#readme).
+[`mjml-hamlet`](https://github.com/kronor-io/mjml/tree/main/mjml-hamlet).
+
+An order confirmation rendered by this package, on a desktop client and on a
+phone (the template is in the `mjml-hamlet` README):
+
+![The order confirmation in a desktop mail client](https://raw.githubusercontent.com/kronor-io/mjml/eab39e4062d3a98055c8295a80d50395f502d6f8/docs/confirmation-desktop.png)
+
+![The same email on a phone: narrower, with item names and prices still side by side](https://raw.githubusercontent.com/kronor-io/mjml/eab39e4062d3a98055c8295a80d50395f502d6f8/docs/confirmation-mobile.png)
 
 ```haskell
 import Data.Text.IO qualified as T
