@@ -84,14 +84,14 @@ renderNode opts root
                     let body' = applyAttributes g "" body
                     mi <- instantiate opts.components [] rootProps [] body'
                     maybe (pure "") render mi
-                (content', g) = runR go g0
+                (content', gd) = runR go g0
                 beforeDoctype =
                     [ T.strip (content c)
                     | c <- children root
                     , tagName c == "mj-raw"
                     , lookup "position" (attributes c) == Just "file-start"
                     ]
-                doc = skeleton g content'
+                doc = skeleton gd content'
              in Right . mergeOutlookConditionals $
                     (if null beforeDoctype then "" else T.intercalate "\n" beforeDoctype <> "\n") <> doc
   where

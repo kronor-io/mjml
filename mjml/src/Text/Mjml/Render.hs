@@ -66,7 +66,6 @@ module Text.Mjml.Render (
 
 import Control.Monad.Trans.State.Strict (State, get, gets, modify', runState)
 import Data.Char (isDigit)
-import Data.List (foldl')
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe, isJust)

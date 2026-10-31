@@ -42,11 +42,19 @@ library
     Text.Mjml.Js
   other-modules:
     Text.Mjml.Component.Body
+    Text.Mjml.Component.Button
     Text.Mjml.Component.Column
+    Text.Mjml.Component.Divider
+    Text.Mjml.Component.Group
     Text.Mjml.Component.Head
+    Text.Mjml.Component.Image
     Text.Mjml.Component.Raw
     Text.Mjml.Component.Section
+    Text.Mjml.Component.Social
+    Text.Mjml.Component.Spacer
+    Text.Mjml.Component.Table
     Text.Mjml.Component.Text
+    Text.Mjml.Component.Wrapper
     Text.Mjml.Components
     Text.Mjml.Skeleton
   build-depends:
