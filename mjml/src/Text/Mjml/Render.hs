@@ -244,6 +244,9 @@ data Self = Self
     , node :: Node
     , registry :: Registry
     , component :: Component
+    , mjClassScope :: Text
+    -- ^ The nearest @mj-class@ above this element, whose per-tag defaults
+    -- apply to its children.
     }
 
 
@@ -357,29 +360,68 @@ renderChildren parent opts = do
                         , nonRawSiblings = nonRaw
                         , extra = childProps opts
                         }
-            mi <- instantiate (registry s) (childContext parent) p (childAttributes opts) k
+            mi <- instantiate (registry s) (childScope s) (childContext parent) p (childAttributes opts) k
             maybe (pure "") (renderer opts) mi
         )
         (zip [0 ..] kids)
     pure (T.concat outs)
 
 
+childScope :: Self -> Text
+childScope s = fromMaybe (mjClassScope s) (lookup "mj-class" (attributes (node s)))
+
+
 -- | @initComponent@: build a component for a node, registering its head
 -- style. 'Nothing' for a tag no component handles.
-instantiate :: Registry -> Attrs -> Props -> Attrs -> Node -> R (Maybe Instance)
-instantiate reg context' p inherited n = case Map.lookup (tagName n) reg of
+--
+-- The node's own attributes stay as written; @mj-attributes@ defaults and
+-- @mj-class@ values are folded in here, as MJML's @applyAttributes@ does
+-- before rendering, so that a component can still tell what was written on
+-- the element itself.
+instantiate :: Registry -> Text -> Attrs -> Props -> Attrs -> Node -> R (Maybe Instance)
+instantiate reg scope context' p inherited n = case Map.lookup (tagName n) reg of
     Nothing -> pure Nothing
     Just c -> do
         g <- get
         let mjAll = Map.findWithDefault [] "mj-all" (defaultAttributes g)
-            resolved = formatAttributes c (defaults c `merge` mjAll `merge` (inherited `merge` attributes n))
-        s <- prepare c (Self resolved p context' n reg c)
+            applied = applyAttributes g scope n
+            resolved = formatAttributes c (defaults c `merge` mjAll `merge` (inherited `merge` applied))
+        s <- prepare c (Self resolved p context' n reg c scope)
         let inst = build c s
         traverse_' (addHeadStyle (name c)) (componentHeadStyle c)
         traverse_' addComponentHeadStyle (instanceHeadStyle inst)
         pure (Just inst)
   where
     traverse_' f = maybe (pure ()) f
+
+
+-- | MJML's @applyAttributes@ for one element: its tag's @mj-attributes@
+-- defaults, then its @mj-class@ values, then the per-tag defaults of the
+-- enclosing @mj-class@, then its own attributes.
+applyAttributes :: GlobalData -> Text -> Node -> Attrs
+applyAttributes g parentMjClass n =
+    let own = attributes n
+        mjClasses = maybe [] (T.splitOn " ") (lookup "mj-class" own)
+        fromClasses =
+            foldl'
+                ( \acc c ->
+                    let values = Map.findWithDefault [] c (classes g)
+                        multiple = case (lookup "css-class" acc, lookup "css-class" values) of
+                            (Just a, Just b) -> [("css-class", a <> " " <> b)]
+                            _ -> []
+                     in acc `merge` values `merge` multiple
+                )
+                []
+                mjClasses
+        fromParentClasses =
+            foldl'
+                (\acc c -> acc `merge` maybe [] (Map.findWithDefault [] (tagName n)) (Map.lookup c (classesDefault g)))
+                []
+                (T.splitOn " " parentMjClass)
+     in Map.findWithDefault [] (tagName n) (defaultAttributes g)
+            `merge` fromClasses
+            `merge` fromParentClasses
+            `merge` filter ((/= "mj-class") . fst) own
 
 
 -- | MJML's type coercion on declared attributes. Only colours change: a

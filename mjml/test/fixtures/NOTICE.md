@@ -3,6 +3,9 @@ The `.mjml` inputs in this directory come from mrml (https://github.com/jdrouet/
 The `.html` files are the output of the reference MJML 5.4.1, regenerated with
 `scripts/update-fixtures.mjs`.
 
+Fixtures not present in mrml (`mj-accordion-attributes-font`) were written for
+this package.
+
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated
 documentation files (the "Software"), to deal in the

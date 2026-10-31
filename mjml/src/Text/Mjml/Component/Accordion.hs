@@ -177,6 +177,7 @@ mjAccordionElement =
                         , node = element (name c) [] []
                         , registry = registry s
                         , component = c
+                        , mjClassScope = mjClassScope s
                         }
         title <- if has "mj-accordion-title" then pure [] else (: []) <$> standalone mjAccordionTitle
         body <- renderChildren inst defChildOptions {childAttributes = inherited}
@@ -213,8 +214,8 @@ mjAccordionElement =
 -- | @resolveFontFamily@: the element's own @font-family@ when it set one,
 -- otherwise the enclosing element's, otherwise the accordion's.
 --
--- MJML checks the element's raw attributes, before @mj-attributes@ defaults
--- are merged in; the node's attributes here already include those defaults.
+-- MJML checks the attributes written on the element itself, so an
+-- @mj-attributes@ default does not count as the element's own choice.
 resolveFontFamily :: Self -> Maybe Text
 resolveFontFamily s
     | any ((== "font-family") . fst) (attributes (node s)) = attr s "font-family"

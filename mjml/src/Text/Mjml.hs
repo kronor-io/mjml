@@ -16,10 +16,8 @@ module Text.Mjml (
     defaultRegistry,
 ) where
 
-import Data.Map.Strict qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as T
-import Control.Monad.Trans.State.Strict qualified
 
 import Text.Mjml.Component.Head (handleHead)
 import Text.Mjml.Components (defaultRegistry, endingTagNames)
@@ -80,9 +78,7 @@ renderNode opts root
                         }
                 go = do
                     mapM_ handleHead [c | c <- take 1 [h | h <- children root, tagName h == "mj-head"]]
-                    g <- getGlobal
-                    let body' = applyAttributes g "" body
-                    mi <- instantiate opts.components [] rootProps [] body'
+                    mi <- instantiate opts.components "" [] rootProps [] body
                     maybe (pure "") render mi
                 (content', gd) = runR go g0
                 beforeDoctype =
@@ -99,40 +95,3 @@ renderNode opts root
         Just v | not (T.null v) -> v
         _ -> d
     rootProps = Props 0 True True 1 1 []
-    getGlobal = Control.Monad.Trans.State.Strict.get
-
-
--- | MJML's @applyAttributes@: fold @mj-attributes@ defaults and @mj-class@
--- values into each element's own attributes.
-applyAttributes :: GlobalData -> Text -> Node -> Node
-applyAttributes g parentMjClass n =
-    let own = attributes n
-        mjClasses = maybe [] (T.splitOn " ") (lookup "mj-class" own)
-        fromClasses =
-            foldl
-                ( \acc c ->
-                    let values = Map.findWithDefault [] c (classes g)
-                        multiple = case (lookup "css-class" acc, lookup "css-class" values) of
-                            (Just a, Just b) -> [("css-class", a <> " " <> b)]
-                            _ -> []
-                     in acc `merge` values `merge` multiple
-                )
-                []
-                mjClasses
-        fromParentClasses =
-            foldl
-                ( \acc c ->
-                    acc `merge` maybe [] (Map.findWithDefault [] (tagName n)) (Map.lookup c (classesDefault g))
-                )
-                []
-                (T.splitOn " " parentMjClass)
-        nextParent = maybe parentMjClass id (lookup "mj-class" own)
-        withoutClass = filter ((/= "mj-class") . fst) own
-     in n
-            { attributes =
-                Map.findWithDefault [] (tagName n) (defaultAttributes g)
-                    `merge` fromClasses
-                    `merge` fromParentClasses
-                    `merge` withoutClass
-            , children = map (applyAttributes g nextParent) (children n)
-            }
