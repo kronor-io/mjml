@@ -122,7 +122,14 @@ build' s = inst
                         else Just (showNumber (parsed - innerPaddings - borders (boxWidths s)) <> "px")
         _ -> Nothing
 
-    tag = if truthy (attr s "href") then "a" else "p"
+    -- A button with an href is an anchor and takes a target; one without is a
+    -- paragraph and must not. Both facts follow from the same question, so it
+    -- is asked once here rather than recovered further down by comparing the
+    -- rendered tag -- which would also put an Eq constraint on Builder that
+    -- text-builder-linear did not carry before 0.1.4.
+    isLink = truthy (attr s "href")
+
+    tag = if isLink then "a" else "p"
 
     rendered =
         mconcat
@@ -157,7 +164,7 @@ build' s = inst
                 , ("rel", maybe ANone AV (attr s "rel"))
                 , ("title", maybe ANone AV (attr s "title"))
                 , ("style", AStyleOf "content")
-                , ("target", if tag == "a" then maybe ANone AV (attr s "target") else ANone)
+                , ("target", if isLink then maybe ANone AV (attr s "target") else ANone)
                 ]
             , ">"
             , fromText (getContent s)
