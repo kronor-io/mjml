@@ -47,7 +47,9 @@ library
     Text.Mjml.Component.Divider
     Text.Mjml.Component.Group
     Text.Mjml.Component.Head
+    Text.Mjml.Component.Hero
     Text.Mjml.Component.Image
+    Text.Mjml.Component.Navbar
     Text.Mjml.Component.Raw
     Text.Mjml.Component.Section
     Text.Mjml.Component.Social

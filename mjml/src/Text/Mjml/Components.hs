@@ -14,7 +14,9 @@ import Text.Mjml.Component.Button (mjButton)
 import Text.Mjml.Component.Column (mjColumn)
 import Text.Mjml.Component.Divider (mjDivider)
 import Text.Mjml.Component.Group (mjGroup)
+import Text.Mjml.Component.Hero (mjHero)
 import Text.Mjml.Component.Image (mjImage)
+import Text.Mjml.Component.Navbar (mjNavbar, mjNavbarLink)
 import Text.Mjml.Component.Raw (mjRaw)
 import Text.Mjml.Component.Section (mjSection)
 import Text.Mjml.Component.Social (mjSocial, mjSocialElement)
@@ -44,6 +46,9 @@ defaultRegistry =
             , mjDivider
             , mjSpacer
             , mjTable
+            , mjHero
+            , mjNavbar
+            , mjNavbarLink
             ]
         ]
 

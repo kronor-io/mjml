@@ -6,6 +6,7 @@
 module Main (main) where
 
 import Control.Monad (forM, unless, when)
+import Data.Char (isAlphaNum)
 import Data.List (isInfixOf, isSuffixOf, sort)
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -54,6 +55,22 @@ main = do
     unless (null failed) exitFailure
 
 
--- | Generated identifiers are random in MJML; both sides use zeros.
+-- | Generated identifiers are random in MJML, so both sides have them
+-- replaced with zeros, as mrml's fixture script does: every id a @for@
+-- attribute refers to, and the id embedded in carousel class names.
 normalizeIds :: Text -> Text
-normalizeIds = id
+normalizeIds html = foldr (\i t -> T.replace i "00000000" t) html (forIds <> carouselIds)
+  where
+    forIds =
+        [ i
+        | rest <- drop 1 (T.splitOn "for=\"" html)
+        , let i = T.takeWhile (/= '"') rest
+        , not (T.null i) && T.all isAlphaNum i
+        ]
+    carouselIds =
+        [ i
+        | rest <- drop 1 (T.splitOn "mj-carousel-" html)
+        , let i = T.takeWhile isAlphaNum rest
+        , T.length i >= 12 && T.length i <= 16
+        , "-" `T.isPrefixOf` T.drop (T.length i) rest
+        ]
