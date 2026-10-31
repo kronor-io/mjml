@@ -1,0 +1,75 @@
+cabal-version:      3.0
+name:               mjml
+version:            0.1.0.0
+synopsis:           Render MJML responsive email templates to HTML
+description:
+  A Haskell implementation of the MJML email framework. It renders MJML
+  documents to the same HTML that the reference JavaScript implementation
+  produces, without Node.js at runtime.
+license:            MIT
+license-file:       LICENSE
+author:             José Lorenzo Rodríguez
+maintainer:         lorenzo@kronor.io
+copyright:          2026 Kronor
+category:           Text, Web, Email
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+                    README.md
+extra-source-files: test/fixtures/*.mjml
+                    test/fixtures/*.html
+tested-with:        GHC ==9.12.4
+
+common warnings
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates
+               -Wincomplete-uni-patterns -Wredundant-constraints
+
+library
+  import:           warnings
+  hs-source-dirs:   src
+  default-language: GHC2021
+  default-extensions:
+    OverloadedStrings
+    LambdaCase
+    MultiWayIf
+    DerivingStrategies
+    OverloadedRecordDot
+    DuplicateRecordFields
+  exposed-modules:
+    Text.Mjml
+    Text.Mjml.Node
+    Text.Mjml.Parser
+    Text.Mjml.Render
+    Text.Mjml.Js
+  other-modules:
+    Text.Mjml.Component.Body
+    Text.Mjml.Component.Column
+    Text.Mjml.Component.Head
+    Text.Mjml.Component.Raw
+    Text.Mjml.Component.Section
+    Text.Mjml.Component.Text
+    Text.Mjml.Components
+    Text.Mjml.Skeleton
+  build-depends:
+      base >=4.20 && <5
+    , containers >=0.6 && <0.9
+    , text >=2.0 && <2.2
+    , transformers >=0.6 && <0.7
+
+test-suite fixtures
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test
+  main-is:          Main.hs
+  other-modules:    HtmlCompare
+  default-language: GHC2021
+  default-extensions:
+    OverloadedStrings
+    LambdaCase
+    DerivingStrategies
+  build-depends:
+      base
+    , containers
+    , directory >=1.3 && <1.4
+    , filepath >=1.4 && <1.6
+    , mjml
+    , text

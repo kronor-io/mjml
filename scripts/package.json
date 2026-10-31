@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "description": "Reference MJML used to regenerate the test fixtures",
+  "type": "module",
+  "dependencies": {
+    "mjml": "5.4.1"
+  }
+}
