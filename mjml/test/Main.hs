@@ -6,7 +6,7 @@
 module Main (main) where
 
 import Control.Monad (forM, unless, when)
-import Data.Char (isAlphaNum)
+import Data.Char (isAlphaNum, isAscii)
 import Data.List (isInfixOf, isSuffixOf, sort)
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -55,22 +55,44 @@ main = do
     unless (null failed) exitFailure
 
 
--- | Generated identifiers are random in MJML, so both sides have them
--- replaced with zeros, as mrml's fixture script does: every id a @for@
--- attribute refers to, and the id embedded in carousel class names.
+-- | Generated identifiers are random in MJML; both sides use zeros.
+--
+-- As in mrml's fixture script: an identifier a @for@ attribute points at
+-- (accordion, navbar) becomes @00000000@ in both its @for@ and its @id@, and a
+-- carousel's identifier becomes @00000000@ wherever it names a class or radio.
 normalizeIds :: Text -> Text
-normalizeIds html = foldr (\i t -> T.replace i "00000000" t) html (forIds <> carouselIds)
+normalizeIds = normalizeCarouselIds . normalizeForIds
+
+
+normalizeForIds :: Text -> Text
+normalizeForIds t = foldr replaceId t ids
   where
-    forIds =
-        [ i
-        | rest <- drop 1 (T.splitOn "for=\"" html)
-        , let i = T.takeWhile (/= '"') rest
-        , not (T.null i) && T.all isAlphaNum i
+    ids =
+        [ v
+        | chunk <- drop 1 (T.splitOn "for=\"" t)
+        , let v = T.takeWhile (/= '"') chunk
+        , not (T.null v)
+        , T.all isAsciiAlphaNum v
         ]
-    carouselIds =
-        [ i
-        | rest <- drop 1 (T.splitOn "mj-carousel-" html)
-        , let i = T.takeWhile isAlphaNum rest
-        , T.length i >= 12 && T.length i <= 16
-        , "-" `T.isPrefixOf` T.drop (T.length i) rest
+    replaceId v =
+        T.replace ("for=\"" <> v <> "\"") "for=\"00000000\""
+            . T.replace ("id=\"" <> v <> "\"") "id=\"00000000\""
+
+
+normalizeCarouselIds :: Text -> Text
+normalizeCarouselIds t = foldr replaceId t ids
+  where
+    ids =
+        [ v
+        | chunk <- drop 1 (T.splitOn "mj-carousel-" t)
+        , let v = T.takeWhile isAsciiAlphaNum chunk
+        , T.length v >= 12 && T.length v <= 16
+        , T.take 1 (T.drop (T.length v) chunk) == "-"
         ]
+    replaceId v =
+        T.replace ("mj-carousel-" <> v <> "-") "mj-carousel-00000000-"
+            . T.replace ("mj-carousel-radio-" <> v) "mj-carousel-radio-00000000"
+
+
+isAsciiAlphaNum :: Char -> Bool
+isAsciiAlphaNum c = isAscii c && isAlphaNum c

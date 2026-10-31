@@ -9,8 +9,10 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 
+import Text.Mjml.Component.Accordion (mjAccordion, mjAccordionElement, mjAccordionText, mjAccordionTitle)
 import Text.Mjml.Component.Body (mjBody)
 import Text.Mjml.Component.Button (mjButton)
+import Text.Mjml.Component.Carousel (mjCarousel, mjCarouselImage)
 import Text.Mjml.Component.Column (mjColumn)
 import Text.Mjml.Component.Divider (mjDivider)
 import Text.Mjml.Component.Group (mjGroup)
@@ -49,6 +51,12 @@ defaultRegistry =
             , mjHero
             , mjNavbar
             , mjNavbarLink
+            , mjAccordion
+            , mjAccordionElement
+            , mjAccordionText
+            , mjAccordionTitle
+            , mjCarousel
+            , mjCarouselImage
             ]
         ]
 

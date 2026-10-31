@@ -199,6 +199,9 @@ data Component = Component
     , defaults :: Attrs
     , componentHeadStyle :: Maybe (Text -> Text)
     -- ^ A style block added once per document, given the breakpoint.
+    , prepare :: Self -> R Self
+    -- ^ Work MJML does in a component's constructor, such as drawing a
+    -- random identifier. Runs once per instantiation, before 'build'.
     , build :: Self -> Instance
     }
 
@@ -212,6 +215,7 @@ defComponent n b =
         , allowedAttributes = []
         , defaults = []
         , componentHeadStyle = Nothing
+        , prepare = pure
         , build = b
         }
 
@@ -248,6 +252,9 @@ data Instance = Instance
     , getStyles :: Text -> Styles
     , render :: R Text
     , childContext :: Attrs
+    , instanceHeadStyle :: Maybe (Text -> Text)
+    -- ^ A style block this instance adds to the head, given the breakpoint:
+    -- MJML's @componentHeadStyle@.
     }
 
 
@@ -258,6 +265,7 @@ defInstance s r =
         , getStyles = const []
         , render = r
         , childContext = context s
+        , instanceHeadStyle = Nothing
         }
 
 
@@ -365,9 +373,11 @@ instantiate reg context' p inherited n = case Map.lookup (tagName n) reg of
         g <- get
         let mjAll = Map.findWithDefault [] "mj-all" (defaultAttributes g)
             resolved = formatAttributes c (defaults c `merge` mjAll `merge` (inherited `merge` attributes n))
-            s = Self resolved p context' n reg c
+        s <- prepare c (Self resolved p context' n reg c)
+        let inst = build c s
         traverse_' (addHeadStyle (name c)) (componentHeadStyle c)
-        pure (Just (build c s))
+        traverse_' addComponentHeadStyle (instanceHeadStyle inst)
+        pure (Just inst)
   where
     traverse_' f = maybe (pure ()) f
 

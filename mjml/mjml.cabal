@@ -40,9 +40,12 @@ library
     Text.Mjml.Parser
     Text.Mjml.Render
     Text.Mjml.Js
+    Text.Mjml.Schema
   other-modules:
+    Text.Mjml.Component.Accordion
     Text.Mjml.Component.Body
     Text.Mjml.Component.Button
+    Text.Mjml.Component.Carousel
     Text.Mjml.Component.Column
     Text.Mjml.Component.Divider
     Text.Mjml.Component.Group
