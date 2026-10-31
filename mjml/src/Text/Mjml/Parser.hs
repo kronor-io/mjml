@@ -89,7 +89,7 @@ parseMjml endingTags source =
             | otherwise -> case more of
                 parent : more' -> closeTo name (parent {children = finalize top : children parent} : more')
                 [] -> (finalize top, [])
-        [] -> error "closeTo: empty stack"
+        [] -> (Node name [] [] "", [])
 
     finish stack root = case stack of
         [] -> root

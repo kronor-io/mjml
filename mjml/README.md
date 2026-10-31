@@ -39,7 +39,7 @@ it into a document.
 
 ## Compatibility
 
-The output is compared with MJML 5.4.1 for the 154 documents in
+The output is compared with MJML 5.4.1 for the 155 documents in
 `test/fixtures`. The comparison ignores whitespace, attribute order and the
 order of CSS declarations, and nothing else.
 
