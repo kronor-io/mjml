@@ -14,6 +14,7 @@ module Text.Mjml (
     -- * Components
     Registry,
     defaultRegistry,
+    endingTagNames,
 ) where
 
 import Data.Text (Text)
