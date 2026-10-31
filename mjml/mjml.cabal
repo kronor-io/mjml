@@ -17,7 +17,7 @@ extra-doc-files:    CHANGELOG.md
                     README.md
 extra-source-files: test/fixtures/*.mjml
                     test/fixtures/*.html
-tested-with:        GHC ==9.12.4
+tested-with:        GHC ==9.10.3 || ==9.12.4 || ==9.14.1
 
 common warnings
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates
@@ -96,7 +96,7 @@ benchmark render
   default-language: GHC2021
   default-extensions:
     OverloadedStrings
-  ghc-options:      -O2 -rtsopts
+  ghc-options:      -rtsopts
   build-depends:
       base
     , mjml
