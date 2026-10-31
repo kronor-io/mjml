@@ -8,7 +8,7 @@ import Text.Mjml.Render
 
 mjRaw :: Component
 mjRaw =
-    (defComponent "mj-raw" (\s -> defInstance s (pure (getContent s))))
+    (defComponent "mj-raw" (\s -> defInstance s (pure (fromText (getContent s)))))
         { endingTag = True
         , rawElement = True
         , allowedAttributes = [("position", "enum(file-start)")]

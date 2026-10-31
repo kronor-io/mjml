@@ -36,7 +36,7 @@ mjSection =
                             else do
                                 body <- render c
                                 pure $
-                                    T.concat
+                                    mconcat
                                         [ startConditionalTag
                                         , "<td"
                                         , htmlAttributes
@@ -111,14 +111,14 @@ data SectionParts = SectionParts
     { instanceOf :: Instance
     , isFullWidth :: Bool
     , hasBackground :: Bool
-    , renderBefore :: Text
-    , renderAfter :: Text
-    , renderSection :: R Text
-    , renderWithBackground :: Text -> Text
+    , renderBefore :: Builder
+    , renderAfter :: Builder
+    , renderSection :: R Builder
+    , renderWithBackground :: Builder -> Builder
     }
 
 
-sectionParts :: Self -> R Text -> SectionParts
+sectionParts :: Self -> R Builder -> SectionParts
 sectionParts s wrappedChildren = parts
   where
     parts =
@@ -234,7 +234,7 @@ sectionParts s wrappedChildren = parts
         _ -> ("center", "top")
 
     before =
-        T.concat
+        mconcat
             [ startConditionalTag
             , "<table"
             , htmlAttributes inst $
@@ -261,7 +261,7 @@ sectionParts s wrappedChildren = parts
     section = do
         kids <- wrappedChildren
         pure $
-            T.concat
+            mconcat
                 [ "<div"
                 , htmlAttributes
                     inst
@@ -342,7 +342,7 @@ sectionParts s wrappedChildren = parts
                 | size == "auto" = "tile"
                 | attr s "background-repeat" == Just "no-repeat" = "frame"
                 | otherwise = "tile"
-         in T.concat
+         in mconcat
                 [ startConditionalTag
                 , "<v:rect"
                 , htmlAttributes
@@ -374,7 +374,7 @@ sectionParts s wrappedChildren = parts
         let inner = before <> sec <> after
             body = if hasBg then withBackground inner else inner
         pure $
-            T.concat
+            mconcat
                 [ "<table"
                 , htmlAttributes
                     inst

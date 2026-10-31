@@ -83,7 +83,7 @@ build' s = inst
              in if unit == "%" then raw else showNumber parsed
 
     rendered =
-        T.concat
+        mconcat
             [ "<table"
             , htmlAttributes
                 inst
@@ -95,6 +95,6 @@ build' s = inst
                 , ("style", AStyleOf "table")
                 ]
             , ">"
-            , getContent s
+            , fromText (getContent s)
             , "</table>"
             ]

@@ -126,7 +126,7 @@ build' s = inst
     tag = if truthy (attr s "href") then "a" else "p"
 
     rendered =
-        T.concat
+        mconcat
             [ "<table"
             , htmlAttributes
                 inst
@@ -161,7 +161,7 @@ build' s = inst
                 , ("target", if tag == "a" then maybe ANone AV (attr s "target") else ANone)
                 ]
             , ">"
-            , getContent s
+            , fromText (getContent s)
             , "</"
             , tag
             , "></td></tr></tbody></table>"

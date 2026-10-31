@@ -32,7 +32,7 @@ mjWrapper =
                             else do
                                 body <- render c
                                 pure $
-                                    T.concat
+                                    mconcat
                                         [ startConditionalTag
                                         , "<tr><td"
                                         , htmlAttributes

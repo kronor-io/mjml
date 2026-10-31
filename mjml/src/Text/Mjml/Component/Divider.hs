@@ -75,7 +75,7 @@ build' s = inst
                 _ -> showNumber (parseIntJs containerWidth - paddingSize) <> "px"
 
     rendered =
-        T.concat
+        mconcat
             [ "<p"
             , htmlAttributes inst [("style", AStyleOf "p")]
             , "></p>"

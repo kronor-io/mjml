@@ -130,7 +130,7 @@ build' s = inst
                                         Just w | not (T.null w) -> Just w
                                         _ -> Nothing
                                 pure $
-                                    T.concat
+                                    mconcat
                                         [ startConditionalTag
                                         , "<td"
                                         , htmlAttributes
@@ -155,7 +155,7 @@ build' s = inst
                 Just "none" -> ANone
                 v -> maybe ANone AV v
         pure $
-            T.concat
+            mconcat
                 [ "<div"
                 , htmlAttributes inst [("class", AV classesName), ("style", AStyleOf "div")]
                 , ">"

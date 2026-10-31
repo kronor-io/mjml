@@ -100,7 +100,7 @@ mjSocial =
                                 else do
                                     body <- render c
                                     pure $
-                                        T.concat
+                                        mconcat
                                             [ startConditionalTag
                                             , "<td>"
                                             , endConditionalTag
@@ -123,7 +123,7 @@ mjSocial =
                                             ]
                         }
             pure $
-                T.concat
+                mconcat
                     [ startConditionalTag
                     , "<table"
                     , htmlAttributes
@@ -145,7 +145,7 @@ mjSocial =
         renderVertical = do
             kids <- renderChildren inst defChildOptions {childAttributes = socialElementAttributes}
             pure $
-                T.concat
+                mconcat
                     [ "<table"
                     , htmlAttributes
                         inst
@@ -322,7 +322,7 @@ mjSocialElement =
                 <> [("rel", opt (attr s "rel")), ("target", opt (attr s "target"))]
 
         makeIcon =
-            T.concat
+            mconcat
                 [ "<td"
                 , htmlAttributes inst [("style", AStyleOf "td")]
                 , "><table"
@@ -357,20 +357,20 @@ mjSocialElement =
         makeContent
             | T.null (getContent s) = ""
             | otherwise =
-                T.concat
+                mconcat
                     [ "<td"
                     , htmlAttributes inst [("style", AStyleOf "tdText")]
                     , ">"
                     , if hasLink
                         then "<a" <> htmlAttributes inst (linkAttrs [("style", AStyleOf "text")]) <> ">"
                         else "<span" <> htmlAttributes inst [("style", AStyleOf "text")] <> ">"
-                    , getContent s
+                    , fromText (getContent s)
                     , if hasLink then "</a>" else "</span>"
                     , "</td>"
                     ]
 
         rendered =
-            T.concat
+            mconcat
                 [ "<tr"
                 , htmlAttributes inst [("class", opt (attr s "css-class"))]
                 , ">"

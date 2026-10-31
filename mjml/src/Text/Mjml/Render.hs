@@ -40,6 +40,9 @@ module Text.Mjml.Render (
     getContent,
     ctx,
     -- * Rendering helpers
+    Builder,
+    fromText,
+    fromChar,
     AttrValue (..),
     htmlAttributes,
     renderStyles,
@@ -68,9 +71,11 @@ import Control.Monad.Trans.State.Strict (State, get, gets, modify', runState)
 import Data.Char (isDigit)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Set qualified as Set
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text.Builder.Linear (Builder, fromChar, fromText)
 
 import Text.Mjml.Js (parseFloatJs, parseIntJs)
 import Text.Mjml.Node (Node (..))
@@ -82,13 +87,20 @@ type Attrs = [(Text, Text)]
 
 
 -- | @{...a, ...b}@: later keys override earlier ones in place, new keys
--- are appended.
+-- are appended. Within @b@ a repeated key keeps its first position and its
+-- last value, as in an object literal.
 merge :: [(Text, v)] -> [(Text, v)] -> [(Text, v)]
-merge = foldl' insert
+merge a [] = a
+merge a b =
+    [(k, Map.findWithDefault v k later) | (k, v) <- a]
+        <> appended Set.empty b
   where
-    insert acc (k, v)
-        | any ((== k) . fst) acc = [(k', if k' == k then v else v') | (k', v') <- acc]
-        | otherwise = acc <> [(k, v)]
+    later = Map.fromList b
+    earlier = Set.fromList (map fst a)
+    appended _ [] = []
+    appended seen ((k, _) : rest)
+        | k `Set.member` earlier || k `Set.member` seen = appended seen rest
+        | otherwise = (k, later Map.! k) : appended (Set.insert k seen) rest
 
 
 -- | One CSS declaration; 'Nothing' values are left out, as MJML drops
@@ -238,6 +250,8 @@ data Props = Props
 -- | Everything a component's methods can see: @this@.
 data Self = Self
     { attrs :: Attrs
+    , attrIndex :: Map Text Text
+    -- ^ 'attrs' again, for lookups.
     , props :: Props
     , context :: Attrs
     -- ^ The child context: @containerWidth@, @gutter@ and so on.
@@ -253,7 +267,7 @@ data Self = Self
 data Instance = Instance
     { self :: Self
     , getStyles :: Text -> Styles
-    , render :: R Text
+    , render :: R Builder
     , childContext :: Attrs
     , instanceHeadStyle :: Maybe (Text -> Text)
     -- ^ A style block this instance adds to the head, given the breakpoint:
@@ -261,7 +275,7 @@ data Instance = Instance
     }
 
 
-defInstance :: Self -> R Text -> Instance
+defInstance :: Self -> R Builder -> Instance
 defInstance s r =
     Instance
         { self = s
@@ -273,7 +287,7 @@ defInstance s r =
 
 
 attr :: Self -> Text -> Maybe Text
-attr s k = lookup k (attrs s)
+attr s k = Map.lookup k (attrIndex s)
 
 
 attrOr :: Self -> Text -> Text -> Text
@@ -309,14 +323,19 @@ data AttrValue
 
 
 -- | @htmlAttributes@: render attributes, leaving out absent ones.
-htmlAttributes :: Instance -> [(Text, AttrValue)] -> Text
-htmlAttributes inst = T.concat . map one
+htmlAttributes :: Instance -> [(Text, AttrValue)] -> Builder
+htmlAttributes inst = foldMap one
   where
     one (k, v) = case v of
-        ANone -> ""
-        AV t -> " " <> k <> "=\"" <> t <> "\""
-        AStyleOf groupName -> " " <> k <> "=\"" <> renderStyles (getStyles inst groupName) <> "\""
-        AStyles ss -> " " <> k <> "=\"" <> renderStyles ss <> "\""
+        ANone -> mempty
+        AV t -> attribute k (fromText t)
+        AStyleOf groupName -> attribute k (styleBuilder (getStyles inst groupName))
+        AStyles ss -> attribute k (styleBuilder ss)
+    attribute k value = fromChar ' ' <> fromText k <> "=\"" <> value <> fromChar '"'
+
+
+styleBuilder :: Styles -> Builder
+styleBuilder = foldMap (\(k, v) -> maybe mempty (\x -> fromText k <> fromChar ':' <> fromText x <> fromChar ';') v)
 
 
 renderStyles :: Styles -> Text
@@ -327,7 +346,7 @@ data ChildOptions = ChildOptions
     { childNodes :: Maybe [Node]
     , childAttributes :: Attrs
     , childProps :: Attrs
-    , renderer :: Instance -> R Text
+    , renderer :: Instance -> R Builder
     }
 
 
@@ -342,7 +361,7 @@ defChildOptions =
 
 
 -- | @renderChildren@.
-renderChildren :: Instance -> ChildOptions -> R Text
+renderChildren :: Instance -> ChildOptions -> R Builder
 renderChildren parent opts = do
     let s = self parent
         kids = fromMaybe (children (node s)) (childNodes opts)
@@ -364,7 +383,7 @@ renderChildren parent opts = do
             maybe (pure "") (renderer opts) mi
         )
         (zip [0 ..] kids)
-    pure (T.concat outs)
+    pure (mconcat outs)
 
 
 childScope :: Self -> Text
@@ -386,7 +405,7 @@ instantiate reg scope context' p inherited n = case Map.lookup (tagName n) reg o
         let mjAll = Map.findWithDefault [] "mj-all" (defaultAttributes g)
             applied = applyAttributes g scope n
             resolved = formatAttributes c (defaults c `merge` mjAll `merge` (inherited `merge` applied))
-        s <- prepare c (Self resolved p context' n reg c scope)
+        s <- prepare c (Self resolved (Map.fromList resolved) p context' n reg c scope)
         let inst = build c s
         traverse_' (addHeadStyle (name c)) (componentHeadStyle c)
         traverse_' addComponentHeadStyle (instanceHeadStyle inst)
@@ -509,26 +528,26 @@ suffixCssClasses classes suffix = case classes of
     _ -> ""
 
 
-startConditionalTag, endConditionalTag, startNegationConditionalTag, endNegationConditionalTag :: Text
+startConditionalTag, endConditionalTag, startNegationConditionalTag, endNegationConditionalTag :: Builder
 startConditionalTag = "<!--[if mso | IE]>"
 endConditionalTag = "<![endif]-->"
 startNegationConditionalTag = "<!--[if !mso | IE]><!-->"
 endNegationConditionalTag = "<!--<![endif]-->"
 
 
-startMsoConditionalTag, startMsoNegationConditionalTag :: Text
+startMsoConditionalTag, startMsoNegationConditionalTag :: Builder
 startMsoConditionalTag = "<!--[if mso]>"
 startMsoNegationConditionalTag = "<!--[if !mso]><!-->"
 
 
-conditionalTag :: Bool -> Text -> Text
+conditionalTag :: Bool -> Builder -> Builder
 conditionalTag negation body =
     (if negation then startNegationConditionalTag else startConditionalTag)
         <> body
         <> (if negation then endNegationConditionalTag else endConditionalTag)
 
 
-msoConditionalTag :: Bool -> Text -> Text
+msoConditionalTag :: Bool -> Builder -> Builder
 msoConditionalTag negation body =
     (if negation then startMsoNegationConditionalTag else startMsoConditionalTag)
         <> body

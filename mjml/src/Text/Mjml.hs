@@ -19,13 +19,14 @@ module Text.Mjml (
 
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text.Builder.Linear (runBuilder)
 
 import Text.Mjml.Component.Head (handleHead)
 import Text.Mjml.Components (defaultRegistry, endingTagNames)
 import Text.Mjml.Node (Node (..))
 import Text.Mjml.Parser (ParseError (..), parseMjml)
 import Text.Mjml.Render
-import Text.Mjml.Skeleton (mergeOutlookConditionals, skeleton)
+import Text.Mjml.Skeleton (skeleton)
 
 
 data Options = Options
@@ -88,9 +89,8 @@ renderNode opts root
                     , tagName c == "mj-raw"
                     , lookup "position" (attributes c) == Just "file-start"
                     ]
-                doc = skeleton gd content'
-             in Right . mergeOutlookConditionals $
-                    (if null beforeDoctype then "" else T.intercalate "\n" beforeDoctype <> "\n") <> doc
+                prefix = if null beforeDoctype then "" else T.intercalate "\n" beforeDoctype <> "\n"
+             in Right (runBuilder (skeleton gd prefix (runBuilder content')))
   where
     nonEmptyOr d = \case
         Just v | not (T.null v) -> v

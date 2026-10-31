@@ -62,16 +62,16 @@ mjText =
                             ]
                         _ -> []
                     }
-            renderContent = "<div" <> htmlAttributes inst [("style", AStyleOf "text")] <> ">" <> getContent s <> "</div>"
+            renderContent = "<div" <> htmlAttributes inst [("style", AStyleOf "text")] <> ">" <> fromText (getContent s) <> "</div>"
             rendered = case attr s "height" of
                 Just h
                     | truthy (Just h) ->
-                        T.concat
+                        mconcat
                             [ conditionalTag False $
                                 "<table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\"><tr><td height=\""
-                                    <> h
+                                    <> fromText h
                                     <> "\" style=\"vertical-align:top;height:"
-                                    <> h
+                                    <> fromText h
                                     <> ";\">"
                             , renderContent
                             , conditionalTag False "</td></tr></table>"

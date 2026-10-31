@@ -44,10 +44,10 @@ mjBody =
                 | T.null (preview g) = ""
                 | otherwise =
                     "<div style=\"display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;\">"
-                        <> preview g
+                        <> fromText (preview g)
                         <> "</div>"
         pure $
-            T.concat
+            mconcat
                 [ "<body"
                 , htmlAttributes
                     inst

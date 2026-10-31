@@ -142,7 +142,7 @@ build' s = inst
                                 body <- render c
                                 let cs = self c
                                 pure $
-                                    T.concat
+                                    mconcat
                                         [ "<tr><td"
                                         , htmlAttributes
                                             c
@@ -177,7 +177,7 @@ build' s = inst
                     , ("style", AStyleOf "inner-table")
                     ]
         pure $
-            T.concat
+            mconcat
                 [ startConditionalTag
                 , "<table"
                 , htmlAttributes
@@ -234,7 +234,7 @@ build' s = inst
         pure $ case attr s "mode" of
             Just "fluid-height" ->
                 let magicTd = "<td" <> htmlAttributes inst [("style", AStyleOf "td-fluid")] <> " />"
-                 in T.concat
+                 in mconcat
                         [ magicTd
                         , "<td"
                         , htmlAttributes inst [backgroundAttr, ("style", AStyles commonStyle)]
@@ -248,7 +248,7 @@ build' s = inst
                         parseIntJs (fromMaybe "" (attr s "height"))
                             - shorthandValue s "padding" "top"
                             - shorthandValue s "padding" "bottom"
-                 in T.concat
+                 in mconcat
                         [ "<td"
                         , htmlAttributes
                             inst
@@ -264,7 +264,7 @@ build' s = inst
     renderHero = do
         mode <- renderMode
         pure $
-            T.concat
+            mconcat
                 [ startConditionalTag
                 , "<table"
                 , htmlAttributes

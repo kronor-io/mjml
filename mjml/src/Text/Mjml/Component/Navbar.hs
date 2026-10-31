@@ -59,7 +59,7 @@ mjNavbar =
 
 navbarHeadStyle :: Text -> Text
 navbarHeadStyle bp =
-    T.concat
+    mconcat
         [ "noinput.mj-menu-checkbox { display:block!important; max-height:none!important; visibility:visible!important; }\n"
         , "@media only screen and (max-width:"
         , makeLowerBreakpoint bp
@@ -123,10 +123,10 @@ buildNavbar s = inst
     renderHamburger = do
         labelKey <- nextId
         pure $
-            T.concat
+            mconcat
                 [ msoConditionalTag True $
                     "<input type=\"checkbox\" id=\""
-                        <> labelKey
+                        <> fromText labelKey
                         <> "\" class=\"mj-menu-checkbox\" style=\"display:none !important; max-height:0; visibility:hidden;\" />"
                 , "<div"
                 , htmlAttributes inst [("class", AV "mj-menu-trigger"), ("style", AStyleOf "trigger")]
@@ -141,11 +141,11 @@ buildNavbar s = inst
                 , "><span"
                 , htmlAttributes inst [("class", AV "mj-menu-icon-open"), ("style", AStyleOf "icoOpen")]
                 , ">"
-                , fromMaybe "" (attr s "ico-open")
+                , fromText (fromMaybe "" (attr s "ico-open"))
                 , "</span><span"
                 , htmlAttributes inst [("class", AV "mj-menu-icon-close"), ("style", AStyleOf "icoClose")]
                 , ">"
-                , fromMaybe "" (attr s "ico-close")
+                , fromText (fromMaybe "" (attr s "ico-close"))
                 , "</span></label></div>"
                 ]
 
@@ -156,7 +156,7 @@ buildNavbar s = inst
                 inst
                 defChildOptions {childAttributes = [("navbarBaseUrl", v) | Just v <- [attr s "base-url"]]}
         pure $
-            T.concat
+            mconcat
                 [ hamburger
                 , -- MJML passes the result of htmlAttributes('div') as the style,
                   -- which resolves to no styles at all.
@@ -165,7 +165,7 @@ buildNavbar s = inst
                 , ">"
                 , conditionalTag False $
                     "<table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" align=\""
-                        <> fromMaybe "" (attr s "align")
+                        <> fromText (fromMaybe "" (attr s "align"))
                         <> "\"><tr>"
                 , kids
                 , conditionalTag False "</tr></table>"
@@ -250,7 +250,7 @@ buildLink s = inst
         _ -> ""
 
     renderContent =
-        T.concat
+        mconcat
             [ "<a"
             , htmlAttributes
                 inst
@@ -262,12 +262,12 @@ buildLink s = inst
                 , ("style", AStyleOf "a")
                 ]
             , ">"
-            , getContent s
+            , fromText (getContent s)
             , "</a>"
             ]
 
     rendered =
-        T.concat
+        mconcat
             [ conditionalTag False $
                 "<td"
                     <> htmlAttributes

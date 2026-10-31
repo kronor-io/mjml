@@ -1,3 +1,4 @@
 packages: mjml mjml-hamlet
 
 tests: True
+benchmarks: True

@@ -207,7 +207,7 @@ build' s = inst
             directionToken = if direction == Just "rtl" then "-rtl" else ""
             normalized = if gutterUnit == "px" then normalizePxValue gutter else gutter
             gutterToken = T.replace "." "-" (showNumber (normalizeUnitValue normalized))
-         in T.concat
+         in mconcat
                 [ "mj-column-gutter-"
                 , T.pack (show (sibling p))
                 , "-"
@@ -280,7 +280,7 @@ build' s = inst
                                 body <- render c
                                 let cs = self c
                                 pure $
-                                    T.concat
+                                    mconcat
                                         [ "<tr><td"
                                         , htmlAttributes
                                             c
@@ -305,7 +305,7 @@ build' s = inst
                                         ]
                     }
         pure $
-            T.concat
+            mconcat
                 [ "<table"
                 , htmlAttributes
                     inst
@@ -324,7 +324,7 @@ build' s = inst
     renderGutter = do
         col <- renderColumn
         pure $
-            T.concat
+            mconcat
                 [ "<table"
                 , htmlAttributes inst $
                     [ ("border", AV "0")

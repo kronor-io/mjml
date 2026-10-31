@@ -14,6 +14,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text.Unsafe (lengthWord8, takeWord8)
 
 import Text.Mjml.Node (Node (..), comment)
 
@@ -105,22 +106,24 @@ parseMjml endingTags source =
 -- | Read the raw content of an ending tag up to its matching close tag,
 -- returning the content and the input after the close tag.
 scanRaw :: Set Text -> Text -> Text -> (Text, Text)
-scanRaw endingTags _name input = loop (1 :: Int) input 0
+scanRaw endingTags _name input = loop (1 :: Int) input
   where
-    loop depth rest consumed
+    -- The content is the input up to where the closing tag starts; measuring
+    -- in UTF-8 bytes keeps that constant time per token.
+    upTo rest = takeWord8 (lengthWord8 input - lengthWord8 rest) input
+    loop depth rest
         | T.null rest = (input, "")
         | otherwise =
             let (tok, rest') = nextToken rest
-                used = T.length rest - T.length rest'
              in case tok of
                     TOpen n _ False
-                        | n `Set.member` endingTags -> loop (depth + 1) rest' (consumed + used)
+                        | n `Set.member` endingTags -> loop (depth + 1) rest'
                     TClose n
                         | n `Set.member` endingTags ->
                             if depth == 1
-                                then (T.take consumed input, rest')
-                                else loop (depth - 1) rest' (consumed + used)
-                    _ -> loop depth rest' (consumed + used)
+                                then (upTo rest, rest')
+                                else loop (depth - 1) rest'
+                    _ -> loop depth rest'
 
 
 nextToken :: Text -> (Token, Text)

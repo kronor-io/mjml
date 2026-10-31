@@ -138,7 +138,7 @@ mjCarousel =
                         }
 
         generateControls direction icon =
-            T.concat
+            mconcat
                 [ "<td"
                 , htmlAttributes
                     inst
@@ -152,8 +152,8 @@ mjCarousel =
                     , ("style", AStyleOf "controls.div")
                     ]
                 , ">"
-                , T.concat
-                    [ T.concat
+                , mconcat
+                    [ mconcat
                         [ "<label"
                         , htmlAttributes
                             inst
@@ -178,7 +178,7 @@ mjCarousel =
         generateImages = do
             images <- renderChildren inst defChildOptions {childAttributes = borderRadius}
             pure $
-                T.concat
+                mconcat
                     [ "<td"
                     , htmlAttributes inst [("style", AStyleOf "images.td")]
                     , "><div"
@@ -193,7 +193,7 @@ mjCarousel =
         generateCarousel = do
             images <- generateImages
             pure $
-                T.concat
+                mconcat
                     [ "<table"
                     , htmlAttributes
                         inst
@@ -226,7 +226,7 @@ mjCarousel =
             pure $
                 msoConditionalTag
                     True
-                    ( T.concat
+                    ( mconcat
                         [ "<div"
                         , htmlAttributes inst [("class", AV "mj-carousel")]
                         , ">"
@@ -359,7 +359,7 @@ mjCarouselImage =
             _ -> renderImage
 
         renderThumbnail =
-            T.concat
+            mconcat
                 [ "<a"
                 , htmlAttributes
                     inst
@@ -423,7 +423,7 @@ mjCarouselImage =
                             ]
                         <> " />"
                 cssClass = attrOr s "css-class" ""
-             in T.concat
+             in mconcat
                     [ "<div"
                     , htmlAttributes
                         inst

@@ -59,7 +59,7 @@ mjImage =
 
 headStyle' :: Text -> Text
 headStyle' bp =
-    T.concat
+    mconcat
         [ "@media only screen and (max-width:"
         , makeLowerBreakpoint bp
         , ") {\ntable.mj-full-width-mobile { width: 100% !important; }\ntd.mj-full-width-mobile { width: auto !important; }\n}"
@@ -147,7 +147,7 @@ build' s = inst
                     <> " />"
          in if truthy (attr s "href")
                 then
-                    T.concat
+                    mconcat
                         [ "<a"
                         , htmlAttributes
                             inst
@@ -166,7 +166,7 @@ build' s = inst
     fluidClass = if fluid then AV "mj-full-width-mobile" else ANone
 
     rendered =
-        T.concat
+        mconcat
             [ "<table"
             , htmlAttributes
                 inst

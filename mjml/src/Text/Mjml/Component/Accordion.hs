@@ -7,6 +7,8 @@ module Text.Mjml.Component.Accordion (
     mjAccordionText,
 ) where
 
+import Data.List (intersperse)
+import Data.Map.Strict qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as T
 
@@ -102,7 +104,7 @@ mjAccordion =
     render' inst = do
         kids <- renderChildren inst defChildOptions {childAttributes = childrenAttr (self inst)}
         pure $
-            T.concat
+            mconcat
                 [ "<table"
                 , htmlAttributes
                     inst
@@ -172,6 +174,7 @@ mjAccordionElement =
                 render . build c $
                     Self
                         { attrs = defaults c `merge` inherited
+                        , attrIndex = Map.fromList (defaults c `merge` inherited)
                         , props = Props 0 True True 0 0 []
                         , context = childContext inst
                         , node = element (name c) [] []
@@ -182,13 +185,13 @@ mjAccordionElement =
         title <- if has "mj-accordion-title" then pure [] else (: []) <$> standalone mjAccordionTitle
         body <- renderChildren inst defChildOptions {childAttributes = inherited}
         text <- if has "mj-accordion-text" then pure [] else (: []) <$> standalone mjAccordionText
-        pure (T.intercalate "\n" (title <> [body] <> text))
+        pure (mconcat (intersperse "\n" (title <> [body] <> text)))
 
     render' inst = do
         let s = self inst
         inner <- handleMissingChildren inst
         pure $
-            T.concat
+            mconcat
                 [ "<tr"
                 , htmlAttributes inst [("class", maybe ANone AV (attr s "css-class"))]
                 , "><td"
@@ -273,11 +276,11 @@ mjAccordionTitle =
                 "<td"
                     <> htmlAttributes inst [("class", maybe ANone AV (attr s "css-class")), ("style", AStyleOf "td")]
                     <> ">"
-                    <> getContent s
+                    <> fromText (getContent s)
                     <> "</td>"
             renderIcons =
                 conditionalTag True $
-                    T.concat
+                    mconcat
                         [ "<td"
                         , htmlAttributes inst [("class", AV "mj-accordion-ico"), ("style", AStyleOf "td2")]
                         , "><img"
@@ -303,7 +306,7 @@ mjAccordionTitle =
                     then [renderTitle, renderIcons]
                     else [renderIcons, renderTitle]
             rendered =
-                T.concat
+                mconcat
                     [ "<div"
                     , htmlAttributes inst [("class", AV "mj-accordion-title")]
                     , "><table"
@@ -311,7 +314,7 @@ mjAccordionTitle =
                         inst
                         [("cellspacing", AV "0"), ("cellpadding", AV "0"), ("style", AStyleOf "table")]
                     , "><tbody><tr>"
-                    , T.intercalate "\n" elements
+                    , mconcat (intersperse "\n" elements)
                     , "</tr></tbody></table></div>"
                     ]
          in inst
@@ -356,7 +359,7 @@ mjAccordionText =
                         _ -> []
                     }
             rendered =
-                T.concat
+                mconcat
                     [ "<div"
                     , htmlAttributes inst [("class", AV "mj-accordion-content")]
                     , "><table"
@@ -366,7 +369,7 @@ mjAccordionText =
                     , "><tbody><tr><td"
                     , htmlAttributes inst [("class", maybe ANone AV (attr s "css-class")), ("style", AStyleOf "td")]
                     , ">"
-                    , getContent s
+                    , fromText (getContent s)
                     , "</td></tr></tbody></table></div>"
                     ]
          in inst

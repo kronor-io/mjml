@@ -28,6 +28,7 @@ showNumber x
     | isInfinite x = if x > 0 then "Infinity" else "-Infinity"
     | x == 0 = "0"
     | x < 0 = "-" <> showNumber (negate x)
+    | x < 1e21 && x == fromInteger (truncate x) = T.pack (show (truncate x :: Integer))
     | otherwise =
         let (ds, n) = floatToDigits 10 x
             k = length ds
@@ -56,7 +57,7 @@ parseIntJs input =
         ds = T.takeWhile isDigit rest
      in if T.null ds
             then 0 / 0
-            else sign * fromInteger (read (T.unpack ds))
+            else sign * fromInteger (decimalValue ds)
 
 
 -- | @parseFloat(s)@. 'NaN' when no number leads the string.
@@ -74,19 +75,24 @@ parseFloatJs input =
                 | e == 'e' || e == 'E' ->
                     let (esign, r') = splitSign r
                         eds = T.takeWhile isDigit r'
-                     in if T.null eds then Nothing else Just (round esign * read (T.unpack eds) :: Integer)
+                     in if T.null eds then Nothing else Just (round esign * decimalValue eds)
             _ -> Nothing
      in if T.null intPart && T.null fracPart
             then 0 / 0
             else
                 let mantissa =
-                        read (T.unpack (if T.null intPart then "0" else intPart) <> T.unpack fracPart) :: Integer
+                        decimalValue intPart * 10 ^ T.length fracPart + decimalValue fracPart
                     scale = toInteger (T.length fracPart) - maybe 0 id expPart
                     value =
                         if scale >= 0
                             then mantissa % (10 ^ scale)
                             else (mantissa * 10 ^ negate scale) % 1
                  in sign * fromRational value
+
+
+-- | The value of a run of decimal digits.
+decimalValue :: Text -> Integer
+decimalValue = T.foldl' (\acc c -> acc * 10 + toInteger (fromEnum c - fromEnum '0')) 0
 
 
 splitSign :: Text -> (Double, Text)

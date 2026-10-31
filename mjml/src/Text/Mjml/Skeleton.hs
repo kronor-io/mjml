@@ -2,19 +2,27 @@
 -- head blocks it assembles.
 module Text.Mjml.Skeleton (
     skeleton,
-    mergeOutlookConditionals,
 ) where
 
-import Data.Char (toLower)
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text.Builder.Linear (Builder, fromText)
+import Data.Text.Unsafe (lengthWord8)
 
 import Text.Mjml.Render (GlobalData (..))
 
 
-skeleton :: GlobalData -> Text -> Text
-skeleton g body =
-    T.concat
+-- | The whole document around a rendered body, with Outlook conditionals
+-- merged, written into one builder. The text before the doctype comes from
+-- @mj-raw position="file-start"@.
+skeleton :: GlobalData -> Text -> Text -> Builder
+skeleton g beforeDoctype body =
+    foldMap fromText (outlookChunks (beforeDoctype <> headPart))
+        <> foldMap fromText (outlookChunks body)
+        <> "\n</html>\n"
+  where
+    headPart =
+      T.concat
         [ "<!doctype html>\n<html lang=\""
         , lang g
         , "\" dir=\""
@@ -39,8 +47,6 @@ skeleton g body =
         , styleFromTags g
         , T.intercalate "\n" (headRaw g)
         , "\n</head>\n"
-        , body
-        , "\n</html>\n"
         ]
 
 
@@ -60,19 +66,32 @@ fontsTags g body =
                     , "\n</style>\n<!--<![endif]-->\n"
                     ]
   where
-    lower = T.map toLower
-    -- MJML matches "[^"]*font-family:[^"]*NAME[^"]*" against the body, so a
-    -- stretch between two consecutive quotes has to name the font after a
-    -- font-family, and font-family:[^;}]*NAME against inlined styles.
-    usesFont fname =
-        let pieces = T.splitOn "\"" (lower body)
-            between = drop 1 (take (length pieces - 1) pieces)
-         in any (namesAfterFamily (lower fname) (const True)) between
-                || any (namesAfterFamily (lower fname) (`notElem` (";}" :: String)) . lower) (inlineStyle g)
-    namesAfterFamily fname keep segment =
-        any
-            (\rest -> fname `T.isInfixOf` T.takeWhile keep rest)
-            (drop 1 (T.splitOn "font-family:" segment))
+    -- MJML matches "[^"]*font-family:[^"]*NAME[^"]*" against the body,
+    -- ignoring case: some stretch between two quotes names the font after a
+    -- font-family. That is every "font-family:" with a quote somewhere before
+    -- it, up to the next quote, which must exist. Inlined styles are matched
+    -- with font-family:[^;}]*NAME.
+    families = fromBody <> concatMap fromInline (inlineStyle g)
+    lowered = asciiLower body
+    firstQuote = lengthWord8 (fst (T.breakOn "\"" lowered))
+    fromBody =
+        [ stretch
+        | (before, match) <- T.breakOnAll "font-family:" lowered
+        , lengthWord8 before > firstQuote
+        , let (stretch, after) = T.break (== '"') (T.drop 12 match)
+        , not (T.null after)
+        ]
+    fromInline style =
+        [ T.takeWhile (`notElem` (";}" :: String)) (T.drop 12 match)
+        | (_, match) <- T.breakOnAll "font-family:" (asciiLower style)
+        ]
+    usesFont fname = any (asciiLower fname `T.isInfixOf`) families
+
+
+-- | Lower-case ASCII letters only. Font names and @font-family@ are ASCII, and
+-- unlike 'T.toLower' this never changes the length of the text.
+asciiLower :: Text -> Text
+asciiLower = T.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
 
 
 mediaQueriesTags :: GlobalData -> Text
@@ -116,18 +135,20 @@ styleFromTags g
     | otherwise = "<style type=\"text/css\">" <> T.concat ["\n" <> s | s <- styles g] <> "\n</style>\n"
 
 
--- | Join an Outlook conditional that closes and immediately reopens.
-mergeOutlookConditionals :: Text -> Text
-mergeOutlookConditionals = go
+-- | MJML's @mergeOutlookConditionnals@: join an Outlook conditional that
+-- closes and immediately reopens. The result is the text in pieces, to be
+-- written out without concatenating it first.
+outlookChunks :: Text -> [Text]
+outlookChunks = go
   where
     endTag = "<![endif]-->"
     startTag = "<!--[if mso | IE]>"
     go t = case T.breakOn endTag t of
         (before, rest)
-            | T.null rest -> before
+            | T.null rest -> [before]
             | otherwise ->
                 let after = T.drop (T.length endTag) rest
                     trimmed = T.stripStart after
                  in if startTag `T.isPrefixOf` trimmed
-                        then before <> go (T.drop (T.length startTag) trimmed)
-                        else before <> endTag <> go after
+                        then before : go (T.drop (T.length startTag) trimmed)
+                        else before : endTag : go after
