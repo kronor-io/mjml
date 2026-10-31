@@ -11,6 +11,7 @@ module Text.Mjml.Hamlet.TH (
 ) where
 
 import Data.Char (isAlphaNum, isLower, isUpper)
+import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -24,7 +25,7 @@ import Text.Shakespeare.Base (derefToExp, parseDeref)
 
 import Text.Mjml (Registry)
 import Text.Mjml.Hamlet.Check (checkTemplate)
-import Text.Mjml.Hamlet.Runtime (ToNodes (..), ToRawHtml (..), element, escape)
+import Text.Mjml.Hamlet.Runtime (ToNodes (..), ToRawHtml (..), ToUrl (..), element, escape, guardMjml, guardStyle, urlAttributes, urlPart)
 import Text.Mjml.Hamlet.Syntax
 
 
@@ -59,11 +60,11 @@ structure src ending docs = [|concat $(listE (map one docs))|]
     one = \case
         DTag _ name as kids
             | name `Set.member` ending ->
-                [|[element $(textE name) $(attrsE src True as) [] $(html src kids)]|]
+                [|[element $(textE name) $(attrsE src name True as) [] $(html src kids)]|]
             | name `elem` ["mj-attributes", "mj-class"] ->
-                [|[element $(textE name) $(attrsE src True as) $(structureRaw kids) ""]|]
+                [|[element $(textE name) $(attrsE src name True as) $(structureRaw kids) ""]|]
             | otherwise ->
-                [|[element $(textE name) $(attrsE src True as) $(structure src ending kids) ""]|]
+                [|[element $(textE name) $(attrsE src name True as) $(structure src ending kids) ""]|]
         DText p _ -> failAt src p "text can only appear inside an ending tag"
         DEmbed p e -> [|toNodes $(expr src p e)|]
         d -> control src (structure src ending) d [|[]|]
@@ -72,7 +73,7 @@ structure src ending docs = [|concat $(listE (map one docs))|]
     -- they are any tag at all.
     structureRaw kids =
         listE
-            [ [|element $(textE name) $(attrsE src True as) [] ""|]
+            [ [|element $(textE name) $(attrsE src name True as) [] ""|]
             | DTag _ name as _ <- kids
             ]
 
@@ -88,18 +89,18 @@ html src docs = [|T.concat $(listE (go docs))|]
         [] -> []
     one = \case
         DTag _ name as kids
-            | name `elem` voidElements -> [|"<" <> $(textE name) <> $(htmlAttrs as) <> ">"|]
+            | name `elem` voidElements -> [|"<" <> $(textE name) <> $(htmlAttrs name as) <> ">"|]
             | otherwise ->
-                [|"<" <> $(textE name) <> $(htmlAttrs as) <> ">" <> $(html src kids) <> "</" <> $(textE name) <> ">"|]
+                [|"<" <> $(textE name) <> $(htmlAttrs name as) <> ">" <> $(html src kids) <> "</" <> $(textE name) <> ">"|]
         DText _ ps -> pieces src ps
         DEmbed p e -> [|toRawHtml $(expr src p e)|]
         d -> control src (html src) d [|""|]
-    htmlAttrs as =
+    htmlAttrs name as =
         [|
             T.concat
                 ( map
                     (\(k, v) -> " " <> k <> (if T.null v then "" else "=\"" <> v <> "\""))
-                    $(attrsE src False as)
+                    $(attrsE src name False as)
                 )
             |]
 
@@ -146,18 +147,43 @@ control src body d empty = case d of
 
 -- | Attributes as @[(Text, Text)]@. Classes written with @.name@ are joined
 -- into @css-class@ on MJML elements and @class@ on HTML ones.
-attrsE :: Source -> Bool -> [Attr] -> Q Exp
-attrsE src isMjml as =
+--
+-- A literal value is used as written: the checker has already seen it. An
+-- interpolated one goes through the policy in "Text.Mjml.Hamlet.Runtime".
+attrsE :: Source -> Text -> Bool -> [Attr] -> Q Exp
+attrsE src tag isMjml as =
     let classKey = if isMjml then "css-class" else "class"
         plain = [(name, maybe [] id value) | Attr _ name value <- as, name /= classKey]
         explicitClass = [maybe [] id value | Attr _ name value <- as, name == classKey]
         shorthand = [ps | ClassAttr _ ps <- as]
         classes = explicitClass <> shorthand
         classAttr =
-            [ [|($(textE classKey), T.unwords (filter (not . T.null) $(listE (map (pieces src) classes))))|]
+            [ [|Just ($(textE classKey), T.unwords (filter (not . T.null) $(listE (map (pieces src) classes))))|]
             | not (null classes)
             ]
-     in listE ([tupE [textE name, pieces src ps] | (name, ps) <- plain] <> classAttr)
+        one (name, ps)
+            | not (any interpolated ps) = [|Just ($(textE name), $(pieces src ps))|]
+            | name `elem` urlAttributes = case ps of
+                [PInterp p e] -> [|Just ($(textE name), toUrl $(expr src p e))|]
+                _ -> [|Just ($(textE name), $(urlPieces ps))|]
+            | isMjml = [|guardMjml $(textE tag) $(textE name) $(pieces src ps)|]
+            | name == "style" = [|guardStyle $(pieces src ps)|]
+            | otherwise = [|Just ($(textE name), $(pieces src ps))|]
+        urlPieces ps =
+            [|
+                T.concat
+                    $( listE
+                        [ case piece of
+                            PInterp p e -> [|urlPart $(expr src p e)|]
+                            _ -> pieces src [piece]
+                        | piece <- ps
+                        ]
+                     )
+                |]
+        interpolated = \case
+            PLit _ -> False
+            _ -> True
+     in [|catMaybes $(listE (map one plain <> classAttr))|]
 
 
 -- | Text with interpolations, as 'Text'.

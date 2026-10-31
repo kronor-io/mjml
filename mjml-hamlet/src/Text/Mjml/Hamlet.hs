@@ -25,6 +25,9 @@ module Text.Mjml.Hamlet (
     mjml,
     mjmlFile,
     renderMjml,
+    SafeUrl,
+    safeUrl,
+    fromSafeUrl,
     ToNodes (..),
     ToRawHtml (..),
 ) where
@@ -37,7 +40,7 @@ import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax (Loc (..), addDependentFile, location)
 
 import Text.Mjml (MjmlError, Node (..), defaultOptions, defaultRegistry, endingTagNames, renderNode)
-import Text.Mjml.Hamlet.Runtime (ToNodes (..), ToRawHtml (..))
+import Text.Mjml.Hamlet.Runtime (SafeUrl, ToNodes (..), ToRawHtml (..), fromSafeUrl, safeUrl)
 import Text.Mjml.Hamlet.TH (Source (..), compileTemplate)
 
 

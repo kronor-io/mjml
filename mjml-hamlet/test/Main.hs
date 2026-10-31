@@ -11,7 +11,7 @@ import System.Exit (exitFailure)
 import Text.Blaze (preEscapedToMarkup)
 
 import Text.Mjml (Node, defaultOptions, defaultRegistry, endingTagNames, renderText)
-import Text.Mjml.Hamlet (mjml, renderMjml)
+import Text.Mjml.Hamlet (fromSafeUrl, mjml, renderMjml, safeUrl)
 import Text.Mjml.Hamlet.Check (checkTemplate)
 import Text.Mjml.Hamlet.Syntax (parseTemplate)
 
@@ -31,7 +31,7 @@ main = do
         same label nodes xml =
             let a = renderMjml nodes
                 b = renderText defaultOptions xml
-             in check label (a == b) (T.pack (show a) <> "\n  vs\n" <> T.pack (show b))
+             in check label (a == b) (firstDifference (either (T.pack . show) id a) (either (T.pack . show) id b))
         rejects label template expected =
             let found = case parseTemplate template of
                     Left (_, why) -> [why]
@@ -40,7 +40,7 @@ main = do
 
     let lines' = [Line "Socks" 2, Line "Hat <wool> & co" 1]
         reference = "TZ-1" :: Text
-        tracking = Just "https://t.example" :: Maybe Text
+        tracking = safeUrl "https://t.example"
 
     same
         "structure, attributes and text"
@@ -113,6 +113,53 @@ main = do
         |]
         "<mjml lang=\"sv\"><mj-head><mj-title>Order TZ-1</mj-title><mj-attributes><mj-all font-family=\"Arial\" /><mj-class name=\"muted\" color=\"#888888\" /></mj-attributes></mj-head><mj-body><mj-section><mj-column><mj-text mj-class=\"muted\">Hej</mj-text></mj-column></mj-section><mj-section><mj-column><mj-text><i>Kronor</i></mj-text></mj-column></mj-section></mj-body></mjml>"
 
+    let quoteBreak = "x\" onmouseover=\"alert(1)" :: Text
+        cssBreak = "red;background:url(https://t.example/p)" :: Text
+        fontBreak = "Arial;color:red" :: Text
+        fontOk = "'Open Sans', Arial" :: Text
+        styleBreak = "color:red}body{display:none" :: Text
+        safe = safeUrl "https://example.com/a?b=1&c=2"
+
+    same
+        "an interpolation after a literal scheme is percent-encoded"
+        [mjml|
+        <mj-section>
+          <mj-column>
+            <mj-button href="https://example.com/o?id=#{quoteBreak}">Go
+        |]
+        "<mjml><mj-body><mj-section><mj-column><mj-button href=\"https://example.com/o?id=x%22%20onmouseover=%22alert(1)\">Go</mj-button></mj-column></mj-section></mj-body></mjml>"
+
+    same
+        "typed and CSS attributes that could add declarations are dropped"
+        [mjml|
+        <mj-section background-color=#{cssBreak}>
+          <mj-column>
+            <mj-text font-family=#{fontBreak} color=#{cssBreak}>A
+            <mj-text font-family=#{fontOk}>B
+        |]
+        "<mjml><mj-body><mj-section><mj-column><mj-text>A</mj-text><mj-text font-family=\"&#39;Open Sans&#39;, Arial\">B</mj-text></mj-column></mj-section></mj-body></mjml>"
+
+    same
+        "a SafeUrl is used whole; HTML style attributes are checked"
+        [mjml|
+        <mj-section>
+          <mj-column>
+            $maybe url <- safe
+              <mj-button href=#{url}>Go
+            <mj-text>
+              <span style=#{styleBreak}>Hi
+        |]
+        "<mjml><mj-body><mj-section><mj-column><mj-button href=\"https://example.com/a?b=1&amp;c=2\">Go</mj-button><mj-text><span>Hi</span></mj-text></mj-column></mj-section></mj-body></mjml>"
+
+    check "safeUrl accepts https" (fmap fromSafeUrl (safeUrl " https://a.example/x ") == Just "https://a.example/x") ""
+    check "safeUrl rejects javascript:" (null (safeUrl "javascript:alert(1)")) ""
+    check "safeUrl rejects quotes" (null (safeUrl "https://a.example/'x")) ""
+    check "safeUrl rejects whitespace" (null (safeUrl "https://a.example/ x")) ""
+
+    rejects "URL starting with an interpolation" "<mj-button href=\"#{u}/x\">" "must be a single #{...} of type SafeUrl"
+    rejects "URL whose scheme an interpolation completes" "<mj-image src=\"java#{u}\">" "must be a single #{...} of type SafeUrl"
+    rejects "interpolated event handler" "<mj-text>\n  <a onclick=#{x}>" "event handler attributes such as onclick"
+    rejects "embed in an attribute" "<mj-text css-class=^{x}>" "cannot be used in an attribute value"
     rejects "unknown element" "<mj-sectoin>" "unknown MJML element <mj-sectoin>"
     rejects "HTML in structure" "<mj-section>\n  <div>" "<div> is HTML"
     rejects "misplaced element" "<mj-section>\n  <mj-text>Hi" "mj-text cannot be used inside mj-section"
@@ -127,3 +174,11 @@ main = do
 
     n <- readIORef failures
     if n == 0 then putStrLn "all mjml-hamlet tests passed" else exitFailure
+
+
+-- | The two texts around where they first differ.
+firstDifference :: Text -> Text -> Text
+firstDifference a b =
+    let i = maybe 0 (\(common, _, _) -> T.length common) (T.commonPrefixes a b)
+        around t = T.take 160 (T.drop (max 0 (i - 60)) t)
+     in "  template: " <> around a <> "\n  xml:      " <> around b

@@ -52,6 +52,29 @@ A template is a list of nodes. `renderMjml` renders a whole document rooted at
 `<mjml>`, and wraps anything else in `<mjml><mj-body>`, so a template can be
 just the sections of an email.
 
+## Escaping and injection
+
+`#{...}` escapes `<`, `>`, `&`, `"` and `'`, so an interpolated value cannot
+leave its text or attribute. Because MJML copies many attributes into CSS and
+some are URLs, interpolated attribute values are also checked for where they
+are going:
+
+* **URLs** (`href`, `src`, `background-url`, …) take either a single
+  `#{url}` of type `SafeUrl`, which `safeUrl` only builds for `https`,
+  `http` and `mailto` URLs with no quotes or spaces in them, or a literal that
+  fixes the scheme, as in `href="https://example.com/o/#{ref}"`, where the
+  interpolated part is percent-encoded. Anything else does not compile.
+* **Typed attributes** (colours, units, enumerations) must match their type
+  when the email is rendered.
+* **Other attributes that end up in CSS**, and `style` on HTML elements, must
+  not contain anything that could add a declaration: `;`, braces,
+  backslashes, comments, `url(` or `@import`.
+* **Event handlers** (`onclick`, …) cannot be interpolated at all.
+
+A value that fails at render time is dropped, as if the attribute had not been
+written. `^{...}` embeds markup without escaping and cannot be used in
+attribute values.
+
 ## What does not compile
 
 The checks MJML's validator makes at runtime happen at compile time, with the
