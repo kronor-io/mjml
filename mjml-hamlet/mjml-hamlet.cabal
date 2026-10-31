@@ -53,6 +53,7 @@ test-suite spec
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Main.hs
+  other-modules:    Readme
   default-language: GHC2021
   default-extensions:
     OverloadedStrings

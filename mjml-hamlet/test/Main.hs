@@ -15,6 +15,8 @@ import Text.Mjml.Hamlet (fromSafeUrl, mjml, renderMjml, safeUrl)
 import Text.Mjml.Hamlet.Check (checkTemplate)
 import Text.Mjml.Hamlet.Syntax (parseTemplate)
 
+import Readme qualified
+
 
 data Line = Line {name :: Text, quantity :: Int}
 
@@ -171,6 +173,19 @@ main = do
     rejects "dangling $else" "$else" "$else without a matching $if"
     rejects "dangling $of" "$of Home" "$of without a matching $case"
     rejects "tabs" "\t<mj-section>" "tabs are not allowed"
+
+    let readmeOrder =
+            Readme.Order
+                { Readme.reference = "TZ-1042"
+                , Readme.customer = "Ada"
+                , Readme.items = [Readme.Item "Wool socks" 2 "€18.00", Readme.Item "Beanie" 1 "€25.00"]
+                , Readme.total = "€43.00"
+                , Readme.trackingUrl = safeUrl "https://track.example/TZ-1042"
+                }
+        rendered = Readme.confirmation readmeOrder
+        contains t = either (const False) (t `T.isInfixOf`) rendered
+    check "README order confirmation renders" (all contains ["Thanks, Ada!", "2 × Wool socks", "Total €43.00", "https://track.example/TZ-1042", "mj-column-per-70"]) (T.pack (show (fmap (T.take 200) rendered)))
+    check "README welcome renders" (either (const False) ("Welcome aboard" `T.isInfixOf`) Readme.renderWelcome) ""
 
     n <- readIORef failures
     if n == 0 then putStrLn "all mjml-hamlet tests passed" else exitFailure

@@ -3,12 +3,14 @@
 Render [MJML](https://mjml.io) responsive email templates to HTML from Haskell,
 without Node.js.
 
-MJML describes an email with components (sections, columns, text, buttons,
-images) and compiles them to the table-based markup that renders consistently
-in Outlook, Gmail, Apple Mail and the rest. This package is a port of the
-reference JavaScript implementation: it produces the same HTML that MJML 5
-does, and its test suite checks that against MJML's own output for every
-component.
+MJML describes an email with a few components (sections, columns, text,
+images, buttons) and compiles them to the nested tables, inline styles and
+Outlook conditional comments that render the same in every mail client, with
+columns that stack on phones. This package is a port of the reference
+JavaScript implementation and produces the same HTML as MJML 5. To write
+templates in Haskell with compile-time checks, see
+[`mjml-hamlet`](https://github.com/kronor-io/mjml/tree/main/mjml-hamlet); for a full example with screenshots, see the
+[repository README](https://github.com/kronor-io/mjml#readme).
 
 ```haskell
 import Data.Text.IO qualified as T

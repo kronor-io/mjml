@@ -1,8 +1,9 @@
 # mjml-hamlet
 
 [MJML](https://mjml.io) email templates written in Hamlet's syntax and checked
-at compile time. Rendering goes through the [`mjml`](../mjml) package, so
-there is no Node.js involved at build time or at runtime.
+at compile time. Rendering goes through the [`mjml`](https://github.com/kronor-io/mjml/tree/main/mjml) package, so
+there is no Node.js involved at build time or at runtime. For what MJML is and
+a full example with screenshots, see the [repository README](https://github.com/kronor-io/mjml#readme).
 
 ```haskell
 {-# LANGUAGE QuasiQuotes #-}
