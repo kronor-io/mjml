@@ -3,7 +3,6 @@ module Text.Mjml.Component.Text (
     mjText,
 ) where
 
-import Data.Text qualified as T
 
 import Text.Mjml.Render
 

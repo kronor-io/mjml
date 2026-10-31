@@ -5,7 +5,6 @@ module Text.Mjml.Component.Wrapper (
 ) where
 
 import Data.Maybe (fromMaybe)
-import Data.Text qualified as T
 
 import Text.Mjml.Component.Section (SectionParts (..), sectionAllowedAttributes, sectionDefaults, sectionParts)
 import Text.Mjml.Render

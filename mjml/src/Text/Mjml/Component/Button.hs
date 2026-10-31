@@ -3,7 +3,6 @@ module Text.Mjml.Component.Button (
     mjButton,
 ) where
 
-import Data.Text qualified as T
 
 import Text.Mjml.Js (showNumber)
 import Text.Mjml.Render

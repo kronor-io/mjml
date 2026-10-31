@@ -402,10 +402,8 @@ instantiate reg scope context' p inherited n = case Map.lookup (tagName n) reg o
     Nothing -> pure Nothing
     Just c -> do
         g <- get
-        let mjAll = Map.findWithDefault [] "mj-all" (defaultAttributes g)
-            applied = applyAttributes g scope n
-            resolved = formatAttributes c (defaults c `merge` mjAll `merge` (inherited `merge` applied))
-        s <- prepare c (Self resolved (Map.fromList resolved) p context' n reg c scope)
+        let resolved = resolveAttributes c g scope inherited n
+        s <- prepare c (Self (Map.toList resolved) resolved p context' n reg c scope)
         let inst = build c s
         traverse_' (addHeadStyle (name c)) (componentHeadStyle c)
         traverse_' addComponentHeadStyle (instanceHeadStyle inst)
@@ -414,43 +412,57 @@ instantiate reg scope context' p inherited n = case Map.lookup (tagName n) reg o
     traverse_' f = maybe (pure ()) f
 
 
--- | MJML's @applyAttributes@ for one element: its tag's @mj-attributes@
--- defaults, then its @mj-class@ values, then the per-tag defaults of the
--- enclosing @mj-class@, then its own attributes.
-applyAttributes :: GlobalData -> Text -> Node -> Attrs
-applyAttributes g parentMjClass n =
-    let own = attributes n
-        mjClasses = maybe [] (T.splitOn " ") (lookup "mj-class" own)
-        fromClasses =
-            foldl'
-                ( \acc c ->
-                    let values = Map.findWithDefault [] c (classes g)
-                        multiple = case (lookup "css-class" acc, lookup "css-class" values) of
-                            (Just a, Just b) -> [("css-class", a <> " " <> b)]
-                            _ -> []
-                     in acc `merge` values `merge` multiple
-                )
-                []
-                mjClasses
-        fromParentClasses =
-            foldl'
-                (\acc c -> acc `merge` maybe [] (Map.findWithDefault [] (tagName n)) (Map.lookup c (classesDefault g)))
-                []
-                (T.splitOn " " parentMjClass)
-     in Map.findWithDefault [] (tagName n) (defaultAttributes g)
-            `merge` fromClasses
-            `merge` fromParentClasses
-            `merge` filter ((/= "mj-class") . fst) own
+-- | An element's attributes, from the lowest precedence to the highest: the
+-- component's defaults, @mj-all@, what the parent passes down, the tag's
+-- @mj-attributes@ defaults, its @mj-class@ values, the per-tag defaults of
+-- the enclosing @mj-class@, and what is written on the element. The last four
+-- are MJML's @applyAttributes@.
+resolveAttributes :: Component -> GlobalData -> Text -> Attrs -> Node -> Map Text Text
+resolveAttributes c g parentMjClass inherited n =
+    formatAttributes c $
+        Map.unions
+            [ Map.delete "mj-class" (Map.fromList own)
+            , fromParentClasses
+            , fromClasses
+            , Map.fromList (Map.findWithDefault [] (tagName n) (defaultAttributes g))
+            , Map.fromList inherited
+            , Map.fromList (Map.findWithDefault [] "mj-all" (defaultAttributes g))
+            , Map.fromList (defaults c)
+            ]
+  where
+    own = attributes n
+    -- Later classes win; css-class values accumulate instead.
+    fromClasses =
+        foldl'
+            ( \acc cls ->
+                let values = Map.fromList (Map.findWithDefault [] cls (classes g))
+                    joined = case (Map.lookup "css-class" acc, Map.lookup "css-class" values) of
+                        (Just x, Just y) -> Map.singleton "css-class" (x <> " " <> y)
+                        _ -> Map.empty
+                 in Map.unions [joined, values, acc]
+            )
+            Map.empty
+            (maybe [] (T.splitOn " ") (lookup "mj-class" own))
+    fromParentClasses =
+        foldl'
+            ( \acc cls ->
+                Map.union
+                    (maybe Map.empty (Map.fromList . Map.findWithDefault [] (tagName n)) (Map.lookup cls (classesDefault g)))
+                    acc
+            )
+            Map.empty
+            (T.splitOn " " parentMjClass)
 
 
 -- | MJML's type coercion on declared attributes. Only colours change: a
 -- three-digit hex colour is expanded.
-formatAttributes :: Component -> Attrs -> Attrs
-formatAttributes c = map coerce
+formatAttributes :: Component -> Map Text Text -> Map Text Text
+formatAttributes c attrMap =
+    foldl'
+        (\m (k, ty) -> if "color" `T.isPrefixOf` ty then Map.adjust expandColor k m else m)
+        attrMap
+        (allowedAttributes c)
   where
-    coerce (k, v) = case lookup k (allowedAttributes c) of
-        Just ty | "color" `T.isPrefixOf` ty -> (k, expandColor v)
-        _ -> (k, v)
     expandColor v = case T.unpack v of
         ['#', a, b, cc] | all isWord [a, b, cc] -> T.pack ['#', a, a, b, b, cc, cc]
         _ -> v

@@ -72,18 +72,23 @@ fontsTags g body =
     -- it, up to the next quote, which must exist. Inlined styles are matched
     -- with font-family:[^;}]*NAME.
     families = fromBody <> concatMap fromInline (inlineStyle g)
-    lowered = asciiLower body
-    firstQuote = lengthWord8 (fst (T.breakOn "\"" lowered))
+    -- Every "font-family:", in any case, ends in "y:" or "Y:". Searching for
+    -- those directly finds them all without copying the document.
+    firstQuote = lengthWord8 (fst (T.breakOn "\"" body))
     fromBody =
-        [ stretch
-        | (before, match) <- T.breakOnAll "font-family:" lowered
+        [ asciiLower stretch
+        | needle <- ["y:", "Y:"]
+        , (before, match) <- T.breakOnAll needle body
+        , asciiLower (T.takeEnd 10 before) == "font-famil"
         , lengthWord8 before > firstQuote
-        , let (stretch, after) = T.break (== '"') (T.drop 12 match)
+        , let (stretch, after) = T.break (== '"') (T.drop 2 match)
         , not (T.null after)
         ]
     fromInline style =
-        [ T.takeWhile (`notElem` (";}" :: String)) (T.drop 12 match)
-        | (_, match) <- T.breakOnAll "font-family:" (asciiLower style)
+        [ asciiLower (T.takeWhile (`notElem` (";}" :: String)) (T.drop 2 match))
+        | needle <- ["y:", "Y:"]
+        , (before, match) <- T.breakOnAll needle style
+        , asciiLower (T.takeEnd 10 before) == "font-famil"
         ]
     usesFont fname = any (asciiLower fname `T.isInfixOf`) families
 
